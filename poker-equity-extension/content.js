@@ -5,11 +5,13 @@ class PokerEquityCalculator {
     this.overlay = null;
     this.lastCards = '';
     this.observer = null;
+    this.gameStateObserver = null;
     this.isDragging = false;
     this.dragOffset = { x: 0, y: 0 };
     this.currentEquity = null;
     this.lastActionTime = 0;
-    this.actionCooldown = 3000; // 3 seconds cooldown between actions
+    this.actionCooldown = 2000; // 2 seconds cooldown between actions
+    this.lastTurnState = false;
     this.gameState = {
       potSize: 0,
       totalPot: 0,
@@ -587,16 +589,37 @@ class PokerEquityCalculator {
     // Update game state to get latest turn information
     this.updateGameState();
     
-    // Check if it's our turn and we have equity calculated
-    if (this.gameState.myTurn && this.currentEquity !== null && this.gameState.availableActions.length > 0) {
+    // Check if it's our turn and we have available actions
+    if (this.gameState.myTurn && this.gameState.availableActions.length > 0) {
+      console.log('🤖 AUTO-PLAY CONDITIONS MET: My turn with available actions');
+      
       // Get current cards for decision making
       const allCards = this.extractCards();
       if (allCards.length >= 2) {
         const { playerCards, boardCards } = this.categorizeCards(allCards);
         
         if (playerCards.length >= 2) {
-          console.log('🤖 AUTO-PLAY: Making decision - Equity:', this.currentEquity, 'Available actions:', this.gameState.availableActions.map(a => a.action));
-          this.makeAutoPlayDecision(playerCards, boardCards, this.currentEquity);
+          // If we don't have equity yet, calculate it quickly
+          if (this.currentEquity === null) {
+            console.log('🤖 Calculating equity for immediate decision...');
+            this.calculateEquity(playerCards, boardCards).then(equity => {
+              this.currentEquity = equity;
+              console.log('🤖 Equity calculated:', equity);
+              this.makeAutoPlayDecision(playerCards, boardCards, equity);
+            });
+          } else {
+            console.log('🤖 AUTO-PLAY: Making decision - Equity:', this.currentEquity, 'Available actions:', this.gameState.availableActions.map(a => a.action));
+            this.makeAutoPlayDecision(playerCards, boardCards, this.currentEquity);
+          }
+        }
+      } else {
+        // No cards detected, use simple strategy
+        console.log('🤖 No cards detected, using conservative strategy');
+        const simpleDecision = { action: 'check', reason: 'No cards detected - conservative play' };
+        if (this.gameState.availableActions.find(a => a.action === 'check')) {
+          this.executeAction(simpleDecision);
+        } else if (this.gameState.availableActions.find(a => a.action === 'fold')) {
+          this.executeAction({ action: 'fold', reason: 'No cards detected - fold' });
         }
       }
     }
@@ -806,17 +829,84 @@ class PokerEquityCalculator {
       attributeFilter: ['class']
     });
     
+    // Set up dedicated game state observer for turn detection
+    this.setupGameStateObserver();
+    
     // Check for cards periodically
     this.intervalId = setInterval(() => this.checkForCards(), 2000);
     
-    // Separate interval for auto-play monitoring (more frequent)
-    this.autoPlayIntervalId = setInterval(() => this.checkAutoPlayConditions(), 500);
+    // More frequent auto-play monitoring
+    this.autoPlayIntervalId = setInterval(() => this.checkAutoPlayConditions(), 200);
+    
+    // Very frequent turn detection
+    this.turnDetectionIntervalId = setInterval(() => this.detectTurnChange(), 100);
+  }
+  
+  setupGameStateObserver() {
+    // Observe the game decisions container for changes
+    const gameDecisionsContainer = document.querySelector('.game-decisions-ctn');
+    if (gameDecisionsContainer) {
+      this.gameStateObserver = new MutationObserver(() => {
+        console.log('🎮 Game decisions container changed');
+        setTimeout(() => this.handleGameStateChange(), 50);
+      });
+      
+      this.gameStateObserver.observe(gameDecisionsContainer, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'style']
+      });
+    }
+    
+    // Also observe action signal changes
+    const actionSignal = document.querySelector('.action-signal');
+    if (actionSignal) {
+      const signalObserver = new MutationObserver(() => {
+        console.log('🚨 Action signal changed');
+        setTimeout(() => this.handleGameStateChange(), 50);
+      });
+      
+      signalObserver.observe(actionSignal, {
+        childList: true,
+        characterData: true,
+        subtree: true
+      });
+    }
+  }
+  
+  handleGameStateChange() {
+    this.updateGameState();
+    
+    // If it's now our turn and auto-play is enabled, make decision immediately
+    if (this.gameState.myTurn && !this.lastTurnState && this.autoPlayEnabled) {
+      console.log('🎯 TURN DETECTED! Triggering immediate auto-play');
+      setTimeout(() => this.checkAutoPlayConditions(), 100);
+    }
+    
+    this.lastTurnState = this.gameState.myTurn;
+  }
+  
+  detectTurnChange() {
+    const previousTurnState = this.gameState.myTurn;
+    this.updateGameState();
+    
+    // If turn state changed to our turn
+    if (this.gameState.myTurn && !previousTurnState && this.autoPlayEnabled) {
+      console.log('🔥 TURN CHANGE DETECTED! Auto-play activating...');
+      setTimeout(() => this.checkAutoPlayConditions(), 200);
+    }
   }
   
   stopMonitoring() {
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
+    }
+    
+    if (this.gameStateObserver) {
+      this.gameStateObserver.disconnect();
+      this.gameStateObserver = null;
     }
     
     if (this.intervalId) {
@@ -827,6 +917,11 @@ class PokerEquityCalculator {
     if (this.autoPlayIntervalId) {
       clearInterval(this.autoPlayIntervalId);
       this.autoPlayIntervalId = null;
+    }
+    
+    if (this.turnDetectionIntervalId) {
+      clearInterval(this.turnDetectionIntervalId);
+      this.turnDetectionIntervalId = null;
     }
   }
 }
