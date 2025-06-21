@@ -8,6 +8,8 @@ class PokerEquityCalculator {
     this.isDragging = false;
     this.dragOffset = { x: 0, y: 0 };
     this.currentEquity = null;
+    this.lastActionTime = 0;
+    this.actionCooldown = 3000; // 3 seconds cooldown between actions
     this.gameState = {
       potSize: 0,
       totalPot: 0,
@@ -567,14 +569,36 @@ class PokerEquityCalculator {
       const equity = await this.calculateEquity(playerCards, boardCards);
       this.currentEquity = equity;
       this.updateOverlay(playerCards, boardCards, equity);
-      
-      // Auto-play decision making
-      if (this.autoPlayEnabled && this.gameState.myTurn) {
-        setTimeout(() => this.makeAutoPlayDecision(playerCards, boardCards, equity), 1000);
-      }
     } else {
       // If we can't find player cards specifically, show all detected cards
       this.updateOverlay(allCards.slice(0, 2), allCards.slice(2), null);
+    }
+  }
+  
+  checkAutoPlayConditions() {
+    if (!this.autoPlayEnabled || !this.enabled) return;
+    
+    // Check cooldown to prevent rapid-fire actions
+    const now = Date.now();
+    if (now - this.lastActionTime < this.actionCooldown) {
+      return;
+    }
+    
+    // Update game state to get latest turn information
+    this.updateGameState();
+    
+    // Check if it's our turn and we have equity calculated
+    if (this.gameState.myTurn && this.currentEquity !== null && this.gameState.availableActions.length > 0) {
+      // Get current cards for decision making
+      const allCards = this.extractCards();
+      if (allCards.length >= 2) {
+        const { playerCards, boardCards } = this.categorizeCards(allCards);
+        
+        if (playerCards.length >= 2) {
+          console.log('🤖 AUTO-PLAY: Making decision - Equity:', this.currentEquity, 'Available actions:', this.gameState.availableActions.map(a => a.action));
+          this.makeAutoPlayDecision(playerCards, boardCards, this.currentEquity);
+        }
+      }
     }
   }
   
@@ -632,10 +656,13 @@ class PokerEquityCalculator {
   async makeAutoPlayDecision(playerCards, boardCards, equity) {
     if (!this.autoPlayEnabled || !this.gameState.myTurn) return;
     
-    console.log('Making auto-play decision with equity:', equity);
+    // Update last action time to start cooldown
+    this.lastActionTime = Date.now();
+    
+    console.log('🤖 Making auto-play decision with equity:', equity);
     
     const decision = this.calculateOptimalAction(equity, boardCards.length);
-    console.log('Decision:', decision);
+    console.log('🤖 Decision:', decision);
     
     if (decision.action && decision.action !== 'wait') {
       this.executeAction(decision);
@@ -690,7 +717,7 @@ class PokerEquityCalculator {
   }
   
   executeAction(decision) {
-    console.log('Executing action:', decision);
+    console.log('🤖 Executing action:', decision);
     
     const availableActions = this.gameState.availableActions;
     let targetButton = null;
@@ -709,6 +736,7 @@ class PokerEquityCalculator {
         targetButton = availableActions.find(a => a.action === 'bet')?.element;
         if (targetButton && decision.size) {
           // Click bet button first, then select size
+          console.log('🤖 Clicking bet button:', targetButton.textContent);
           targetButton.click();
           setTimeout(() => this.selectBetSize(decision.size), 500);
           return;
@@ -717,8 +745,10 @@ class PokerEquityCalculator {
     }
     
     if (targetButton) {
-      console.log('Clicking button:', targetButton.textContent);
+      console.log('🤖 Clicking button:', targetButton.textContent, 'Reason:', decision.reason);
       targetButton.click();
+    } else {
+      console.log('🤖 No button found for action:', decision.action);
     }
   }
   
@@ -742,16 +772,19 @@ class PokerEquityCalculator {
     }
     
     if (targetButton) {
-      console.log('Selecting bet size:', targetButton.textContent);
+      console.log('🤖 Selecting bet size:', targetButton.textContent);
       targetButton.click();
       
       // Submit the bet
       setTimeout(() => {
         const submitButton = document.querySelector('.action-button.bet[type="submit"]');
         if (submitButton) {
+          console.log('🤖 Submitting bet');
           submitButton.click();
         }
       }, 300);
+    } else {
+      console.log('🤖 No bet size button found for:', size);
     }
   }
   
@@ -773,8 +806,11 @@ class PokerEquityCalculator {
       attributeFilter: ['class']
     });
     
-    // Also check periodically
+    // Check for cards periodically
     this.intervalId = setInterval(() => this.checkForCards(), 2000);
+    
+    // Separate interval for auto-play monitoring (more frequent)
+    this.autoPlayIntervalId = setInterval(() => this.checkAutoPlayConditions(), 500);
   }
   
   stopMonitoring() {
@@ -786,6 +822,11 @@ class PokerEquityCalculator {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
+    }
+    
+    if (this.autoPlayIntervalId) {
+      clearInterval(this.autoPlayIntervalId);
+      this.autoPlayIntervalId = null;
     }
   }
 }
