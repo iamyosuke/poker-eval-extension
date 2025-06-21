@@ -1,10 +1,9 @@
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Poker Equity Calculator extension installed');
-});
-
-chrome.action.onClicked.addListener((tab) => {
-  chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    files: ['content.js']
+  
+  // Set default storage values
+  chrome.storage.local.set({
+    equityEnabled: false,
+    autoPlayEnabled: false
   });
 });

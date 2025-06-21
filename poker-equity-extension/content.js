@@ -22,8 +22,14 @@ class PokerEquityCalculator {
     console.log('Poker Equity Calculator initialized');
     
     // Check if enabled in storage
-    const result = await chrome.storage.local.get(['equityEnabled']);
+    const result = await chrome.storage.local.get(['equityEnabled', 'autoPlayEnabled']);
     this.enabled = result.equityEnabled !== false;
+    this.autoPlayEnabled = result.autoPlayEnabled === true;
+    
+    console.log('Initial settings:', { 
+      enabled: this.enabled, 
+      autoPlay: this.autoPlayEnabled 
+    });
     
     if (this.enabled) {
       this.createOverlay();
@@ -32,8 +38,11 @@ class PokerEquityCalculator {
     
     // Listen for messages from popup
     chrome.runtime.onMessage.addListener((request) => {
+      console.log('Message received:', request);
+      
       if (request.action === 'toggleEquity') {
         this.enabled = request.enabled;
+        console.log('Equity calculator:', this.enabled ? 'ENABLED' : 'DISABLED');
         if (this.enabled) {
           this.createOverlay();
           this.startMonitoring();
@@ -43,7 +52,32 @@ class PokerEquityCalculator {
         }
       } else if (request.action === 'toggleAutoPlay') {
         this.autoPlayEnabled = request.enabled;
-        console.log('Auto-play:', this.autoPlayEnabled ? 'ENABLED' : 'DISABLED');
+        console.log('🤖 Auto-play toggled via message:', this.autoPlayEnabled ? 'ENABLED' : 'DISABLED');
+        
+        // Also update storage to ensure persistence
+        chrome.storage.local.set({autoPlayEnabled: this.autoPlayEnabled});
+        
+        // Update overlay immediately to reflect the change
+        if (this.overlay) {
+          this.updateOverlayStatus();
+        }
+      }
+    });
+    
+    // Also listen for storage changes directly
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace === 'local') {
+        if (changes.autoPlayEnabled) {
+          this.autoPlayEnabled = changes.autoPlayEnabled.newValue;
+          console.log('🤖 Auto-play changed via storage:', this.autoPlayEnabled ? 'ENABLED' : 'DISABLED');
+          if (this.overlay) {
+            this.updateOverlayStatus();
+          }
+        }
+        if (changes.equityEnabled) {
+          this.enabled = changes.equityEnabled.newValue;
+          console.log('Calculator changed via storage:', this.enabled ? 'ENABLED' : 'DISABLED');
+        }
       }
     });
   }
@@ -463,25 +497,44 @@ class PokerEquityCalculator {
     }
     
     if (equityDetails) {
-      const autoPlayStatus = this.autoPlayEnabled ? 
-        `<div style="color: #4CAF50;">🤖 Auto-play: ON</div>` : 
-        `<div style="color: #888;">🤖 Auto-play: OFF</div>`;
-      
-      const gameStateInfo = this.gameState.myTurn ? 
-        `<div style="color: #FFD700;">⏰ Your Turn</div>` : 
-        `<div style="color: #888;">⏳ Waiting</div>`;
-      
-      const potInfo = this.gameState.totalPot > 0 ? 
-        `<div>💰 Pot: ${this.gameState.totalPot}</div>` : '';
-      
-      equityDetails.innerHTML = `
-        <div>Hand: ${playerHand}</div>
-        <div>Board: ${board}</div>
-        ${potInfo}
-        ${gameStateInfo}
-        ${autoPlayStatus}
-      `;
+      this.updateOverlayDetails(playerHand, board, equityDetails);
     }
+  }
+  
+  updateOverlayStatus() {
+    if (!this.overlay) return;
+    
+    const equityDetails = this.overlay.querySelector('.equity-details');
+    if (equityDetails) {
+      // Get current hand and board info from the existing display
+      const handDiv = equityDetails.querySelector('div');
+      const playerHand = handDiv ? handDiv.textContent.replace('Hand: ', '') : '';
+      const boardDiv = equityDetails.querySelectorAll('div')[1];
+      const board = boardDiv ? boardDiv.textContent.replace('Board: ', '') : '';
+      
+      this.updateOverlayDetails(playerHand, board, equityDetails);
+    }
+  }
+  
+  updateOverlayDetails(playerHand, board, equityDetails) {
+    const autoPlayStatus = this.autoPlayEnabled ? 
+      `<div style="color: #4CAF50; font-weight: bold;">🤖 Auto-play: ON</div>` : 
+      `<div style="color: #888;">🤖 Auto-play: OFF</div>`;
+    
+    const gameStateInfo = this.gameState.myTurn ? 
+      `<div style="color: #FFD700;">⏰ Your Turn</div>` : 
+      `<div style="color: #888;">⏳ Waiting</div>`;
+    
+    const potInfo = this.gameState.totalPot > 0 ? 
+      `<div>💰 Pot: ${this.gameState.totalPot}</div>` : '';
+    
+    equityDetails.innerHTML = `
+      <div>Hand: ${playerHand}</div>
+      <div>Board: ${board}</div>
+      ${potInfo}
+      ${gameStateInfo}
+      ${autoPlayStatus}
+    `;
   }
   
   async checkForCards() {
@@ -551,7 +604,15 @@ class PokerEquityCalculator {
       amount: this.extractBetAmount(btn.textContent)
     }));
     
-    console.log('Game state updated:', this.gameState);
+    // Log auto-play status for debugging
+    if (this.gameState.myTurn && this.autoPlayEnabled) {
+      console.log('🤖 AUTO-PLAY ACTIVE - Your turn detected');
+    }
+    
+    console.log('Game state updated:', {
+      ...this.gameState,
+      autoPlayEnabled: this.autoPlayEnabled
+    });
   }
   
   getActionType(button) {
