@@ -1,0 +1,208 @@
+apiVersion: haconiwa.dev/v1
+kind: Organization
+metadata:
+  name: small-team-org
+spec:
+  companyName: "Small Development Team"
+  industry: "Software Development"
+  basePath: "./small-team"
+  hierarchy:
+    departments:
+    - id: "core"
+      name: "Core Team"
+      description: "Main development team"
+      roles:
+      - roleType: "management"
+        title: "Team Lead"
+        agentId: "lead-taro"
+        responsibilities:
+          - "Project management"
+          - "Technical direction"
+          - "Team coordination"
+      - roleType: "engineering"
+        title: "Frontend Developer"
+        agentId: "frontend-hanako"
+        responsibilities:
+          - "UI/UX development"
+          - "Frontend architecture"
+      - roleType: "engineering"
+        title: "Backend Developer"
+        agentId: "backend-jiro"
+        responsibilities:
+          - "API development"
+          - "Database design"
+      - roleType: "engineering"
+        title: "Full Stack Developer"
+        agentId: "fullstack-saburo"
+        responsibilities:
+          - "Full stack development"
+          - "DevOps support"
+      - roleType: "engineering"
+        title: "QA Engineer"
+        agentId: "qa-shiro"
+        responsibilities:
+          - "Quality assurance"
+          - "Testing automation"
+
+---
+apiVersion: haconiwa.dev/v1
+kind: Space
+metadata:
+  name: small-team-space
+spec:
+  nations:
+  - id: jp
+    name: Japan
+    cities:
+    - id: tokyo
+      name: Tokyo
+      villages:
+      - id: dev-village
+        name: "Development Village"
+        companies:
+        - name: small-team
+          grid: "2x3"
+          basePath: "./small-team"
+          organizationRef: "small-team-org"
+          agentDefaults:
+            type: "claude-code"
+            permissions:
+              allow:
+                - "Bash(python -m pytest)"
+                - "Bash(npm test)"
+                - "Read(src/**/*)"
+                - "Write(src/**/*)"
+                - "Edit(src/**/*)"
+              deny:
+                - "Bash(rm -rf /)"
+            env:
+              DEV_MODE: "1"
+          gitRepo:
+            url: "https://github.com/example/small-team-project"
+            defaultBranch: "main"
+            auth: "https"
+          buildings:
+          - id: "office"
+            name: "Development Office"
+            floors:
+            - id: "main-floor"
+              name: "Main Floor"
+              rooms:
+              - id: room-dev
+                name: "Development Room"
+                description: "Main development workspace"
+
+---
+apiVersion: haconiwa.dev/v1
+kind: Task
+metadata:
+  name: task_frontend_ui
+spec:
+  taskId: task_frontend_ui
+  title: "Frontend UI Development"
+  description: |
+    ## Frontend UI Development
+    
+    Develop user interface components and pages.
+    
+    ### Requirements:
+    - React components
+    - Responsive design
+    - User experience optimization
+  assignee: "frontend-hanako"
+  spaceRef: "small-team"
+  priority: "high"
+  worktree: true
+  branch: "feature/frontend-ui"
+
+---
+apiVersion: haconiwa.dev/v1
+kind: Task
+metadata:
+  name: task_backend_api
+spec:
+  taskId: task_backend_api
+  title: "Backend API Development"
+  description: |
+    ## Backend API Development
+    
+    Develop REST API endpoints and database integration.
+    
+    ### Requirements:
+    - RESTful API design
+    - Database integration
+    - Authentication system
+  assignee: "backend-jiro"
+  spaceRef: "small-team"
+  priority: "high"
+  worktree: true
+  branch: "feature/backend-api"
+
+---
+apiVersion: haconiwa.dev/v1
+kind: Task
+metadata:
+  name: task_integration
+spec:
+  taskId: task_integration
+  title: "System Integration"
+  description: |
+    ## System Integration
+    
+    Integrate frontend and backend systems.
+    
+    ### Requirements:
+    - API integration
+    - End-to-end testing
+    - Performance optimization
+  assignee: "fullstack-saburo"
+  spaceRef: "small-team"
+  priority: "medium"
+  worktree: true
+  branch: "feature/integration"
+
+---
+apiVersion: haconiwa.dev/v1
+kind: Task
+metadata:
+  name: task_testing
+spec:
+  taskId: task_testing
+  title: "Quality Assurance & Testing"
+  description: |
+    ## Quality Assurance & Testing
+    
+    Comprehensive testing and quality assurance.
+    
+    ### Requirements:
+    - Unit testing
+    - Integration testing
+    - Test automation
+  assignee: "qa-shiro"
+  spaceRef: "small-team"
+  priority: "high"
+  worktree: true
+  branch: "feature/testing"
+
+---
+apiVersion: haconiwa.dev/v1
+kind: Task
+metadata:
+  name: task_project_management
+spec:
+  taskId: task_project_management
+  title: "Project Management & Coordination"
+  description: |
+    ## Project Management & Coordination
+    
+    Overall project coordination and management.
+    
+    ### Requirements:
+    - Project planning
+    - Team coordination
+    - Progress tracking
+  assignee: "lead-taro"
+  spaceRef: "small-team"
+  priority: "high"
+  worktree: true
+  branch: "feature/project-management"

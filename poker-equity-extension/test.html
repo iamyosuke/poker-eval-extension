@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poker Extension Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #0f4c3a;
+            color: white;
+        }
+        
+        .poker-table {
+            background-color: #2d5a4e;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        
+        .table-player-cards, .table-board {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        .card-container {
+            width: 60px;
+            height: 84px;
+            border-radius: 8px;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .card-container.flipped {
+            background-color: white;
+        }
+        
+        .card-container:not(.flipped) {
+            background-color: #4a4a4a;
+            color: #666;
+        }
+        
+        .card-h { color: red !important; }
+        .card-d { color: red !important; }
+        .card-c { color: black !important; }
+        .card-s { color: black !important; }
+        
+        .value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .suit {
+            font-size: 16px;
+        }
+        
+        .sub-suit {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 10px;
+        }
+        
+        h2 {
+            text-align: center;
+            color: #ffd700;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .info {
+            background-color: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🃏 Poker Equity Calculator Test Page</h1>
+    
+    <div class="info">
+        <p><strong>Instructions:</strong></p>
+        <ol>
+            <li>Load the Chrome extension</li>
+            <li>Enable the extension from the popup</li>
+            <li>Use the buttons below to simulate different poker scenarios</li>
+            <li>The equity overlay should appear in the bottom-right corner</li>
+        </ol>
+    </div>
+    
+    <div class="controls">
+        <button onclick="scenario1()">Scenario 1: AA vs Random (Pre-flop)</button>
+        <button onclick="scenario2()">Scenario 2: AK vs Random (Flop)</button>
+        <button onclick="scenario3()">Scenario 3: Low Pair (Turn)</button>
+        <button onclick="scenario4()">Scenario 4: Flush Draw (River)</button>
+        <button onclick="clearCards()">Clear All Cards</button>
+    </div>
+    
+    <div class="poker-table">
+        <h2>Player Cards</h2>
+        <div class="table-player-cards" id="player-cards">
+            <!-- Player cards will be inserted here -->
+        </div>
+        
+        <h2>Community Board</h2>
+        <div class="table-board" id="board-cards">
+            <!-- Board cards will be inserted here -->
+        </div>
+    </div>
+    
+    <script>
+        function createCard(rank, suit, isFlipped = true) {
+            const suitSymbols = { 'h': '♥', 'd': '♦', 'c': '♣', 's': '♠' };
+            const rankClasses = {
+                '2': 'card-s-2', '3': 'card-s-3', '4': 'card-s-4', '5': 'card-s-5',
+                '6': 'card-s-6', '7': 'card-s-7', '8': 'card-s-8', '9': 'card-s-9',
+                'T': 'card-s-10', 'J': 'card-s-11', 'Q': 'card-s-12', 'K': 'card-s-13', 'A': 'card-s-14'
+            };
+            
+            const cardDiv = document.createElement('div');
+            
+            if (isFlipped) {
+                cardDiv.className = `card-container card-${suit} ${rankClasses[rank] || ''} flipped card-p1 med`;
+                cardDiv.innerHTML = `
+                    <div class="card-flipper card-flipper-animated">
+                        <div class="front"></div>
+                        <div class="card">
+                            <span class="value" translate="no">${rank === 'T' ? '10' : rank}</span>
+                            <span class="suit sub-suit" translate="no">${suit}</span>
+                            <span class="suit" translate="no">${suit}</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                cardDiv.className = 'card-container';
+                cardDiv.innerHTML = '<div class="card-back">🂠</div>';
+            }
+            
+            return cardDiv;
+        }
+        
+        function clearCards() {
+            document.getElementById('player-cards').innerHTML = '';
+            document.getElementById('board-cards').innerHTML = '';
+        }
+        
+        function scenario1() {
+            clearCards();
+            
+            // AA pre-flop
+            const playerCards = document.getElementById('player-cards');
+            playerCards.appendChild(createCard('A', 'h'));
+            playerCards.appendChild(createCard('A', 's'));
+            
+            // No board cards (pre-flop)
+        }
+        
+        function scenario2() {
+            clearCards();
+            
+            // AK with flop
+            const playerCards = document.getElementById('player-cards');
+            playerCards.appendChild(createCard('A', 'h'));
+            playerCards.appendChild(createCard('K', 's'));
+            
+            // Flop: A-7-2 rainbow
+            const boardCards = document.getElementById('board-cards');
+            boardCards.appendChild(createCard('A', 'd'));
+            boardCards.appendChild(createCard('7', 'c'));
+            boardCards.appendChild(createCard('2', 's'));
+        }
+        
+        function scenario3() {
+            clearCards();
+            
+            // 88 with turn
+            const playerCards = document.getElementById('player-cards');
+            playerCards.appendChild(createCard('8', 'h'));
+            playerCards.appendChild(createCard('8', 'd'));
+            
+            // Board: A-K-Q-J
+            const boardCards = document.getElementById('board-cards');
+            boardCards.appendChild(createCard('A', 's'));
+            boardCards.appendChild(createCard('K', 'c'));
+            boardCards.appendChild(createCard('Q', 'd'));
+            boardCards.appendChild(createCard('J', 'h'));
+        }
+        
+        function scenario4() {
+            clearCards();
+            
+            // Flush draw with river
+            const playerCards = document.getElementById('player-cards');
+            playerCards.appendChild(createCard('A', 'h'));
+            playerCards.appendChild(createCard('K', 'h'));
+            
+            // Board: 9h-8h-3d-2h-Jc (made flush)
+            const boardCards = document.getElementById('board-cards');
+            boardCards.appendChild(createCard('9', 'h'));
+            boardCards.appendChild(createCard('8', 'h'));
+            boardCards.appendChild(createCard('3', 'd'));
+            boardCards.appendChild(createCard('2', 'h'));
+            boardCards.appendChild(createCard('J', 'c'));
+        }
+        
+        // Start with scenario 1 by default
+        setTimeout(scenario1, 1000);
+    </script>
+</body>
+</html>

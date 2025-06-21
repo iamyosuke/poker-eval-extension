@@ -1,0 +1,112 @@
+#poker-equity-overlay {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 15px;
+  border-radius: 10px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
+  z-index: 999999;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 2px solid #4CAF50;
+  min-width: 200px;
+  max-width: 300px;
+  backdrop-filter: blur(5px);
+  cursor: move;
+  user-select: none;
+  transition: background 0.2s ease;
+}
+
+#poker-equity-overlay:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+#poker-equity-overlay.dragging {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.02);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+#poker-equity-overlay .equity-header {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 10px;
+  text-align: center;
+  color: #4CAF50;
+  border-bottom: 1px solid #4CAF50;
+  padding-bottom: 5px;
+}
+
+#poker-equity-overlay .equity-content {
+  line-height: 1.4;
+}
+
+#poker-equity-overlay .equity-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: #FFD700;
+  text-align: center;
+  margin: 8px 0;
+}
+
+#poker-equity-overlay .equity-details {
+  font-size: 12px;
+  color: #CCCCCC;
+  margin-top: 8px;
+}
+
+#poker-equity-overlay .equity-details div {
+  margin: 3px 0;
+  word-break: break-word;
+}
+
+/* Responsive design for smaller screens */
+@media screen and (max-width: 768px) {
+  #poker-equity-overlay {
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+    font-size: 12px;
+  }
+  
+  #poker-equity-overlay .equity-header {
+    font-size: 14px;
+  }
+  
+  #poker-equity-overlay .equity-value {
+    font-size: 16px;
+  }
+}
+
+/* Animation for overlay appearance */
+#poker-equity-overlay {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Different colors for different equity ranges */
+#poker-equity-overlay .equity-high {
+  color: #4CAF50;
+}
+
+#poker-equity-overlay .equity-medium {
+  color: #FFD700;
+}
+
+#poker-equity-overlay .equity-low {
+  color: #FF6B6B;
+}
